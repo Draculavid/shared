@@ -8,6 +8,8 @@
 class CircularBuffer
 {
 private:
+	//The handles for the filemaps
+	HANDLE hMapFile, sMapFile;
 
 	//the variables that hold the addresses for the shared values
 	char* tail;

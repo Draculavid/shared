@@ -13,9 +13,76 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	(the shared with the tail and the bipidibop), and store those adresses in 
 	the private variables
 	
-	if the bool isProducer is true, then donw increase the client value, keep that at zero.
+	if the bool isProducer is true, then don't increase the client value, keep that at zero.
 	If it's false, then  increase it with a mutex and when the client > 0, the program will run,
 	i think...*/
+	//HANDLE hMapFile;
+	char * cBuf, sBuf;
+
+#pragma region declaring the main memory
+	hMapFile = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		buffSize,
+		buffName);
+
+	if (hMapFile == NULL)
+	{
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"),
+			GetLastError());
+	}
+
+	cBuf = (char*)MapViewOfFile(
+		hMapFile,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		chunkSize); //Chunksize here?????????????????????????
+
+	if (cBuf == NULL)
+	{
+		_tprintf(TEXT("Could not map view of file (%d).\n"),
+			GetLastError());
+
+		CloseHandle(hMapFile);
+	}
+#pragma endregion
+
+#pragma region the second memory
+	//declaring a second memory to be used for control.
+	sMapFile = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		buffSize,
+		buffName);
+
+	if (sMapFile == NULL)
+	{
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"),
+			GetLastError());
+	}
+
+	sBuf = (char*)MapViewOfFile(
+		sMapFile,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		chunkSize); //Chunksize here?????????????????????????
+
+	if (sBuf == NULL)
+	{
+		_tprintf(TEXT("Could not map view of file (%d).\n"),
+			GetLastError());
+
+		CloseHandle(sMapFile);
+	}
+#pragma endregion
+
+
 }
 
 CircularBuffer::~CircularBuffer()

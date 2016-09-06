@@ -38,13 +38,21 @@ size_t randomString(char *s, const size_t maxSize) {
 }
 #pragma endregion
 
-bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, LPCWSTR chunkMsg)
+bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, size_t & numMessages, LPCWSTR chunkMsg)
 {
+	bool isRandom = false;
+	/*the current message variable will tell the producer how many
+	messages are left to send */
 	if (strcmp((const char*)chunkMsg, "random") == 0)
 	{
 		srand(time(NULL));
+		isRandom = true;
 		//send to the random calc here, the one that calculates numbers only
 		//to fiund out the size, max size will be a 1/4 of the buffSize
+	}
+	while (numMessages > 0)
+	{
+
 	}
 	/*In both of these function they should create a circularbuffer object
 	and then try to send messages, i guess.
@@ -53,7 +61,9 @@ bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 	been connected. I think that the producer is supposed to be the last one to connect.
 	
 	Even if the producer is the first, we need to start sending when there is at least
-	one client present.*/
+	one client present.
+	
+	delay will be used for the sleep function between the messages*/
 
 	//CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
 	return false;
@@ -88,9 +98,13 @@ int main(int argc, char* args[])
 		fixed size, i guess we should send 1/4 of the reserved memory
 		in each message.
 		*/
+		size_t delay = atoi(args[2]);
+		size_t buffSize = atoi(args[3]);
+		size_t numMessages = atoi(args[4]);
 
 		if (strcmp(args[1], "Producer") == 0)
-			int hejsan = 0;
+			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, (LPCWSTR)args[5]);
 		//else if (strcmp(args[1], "Consumer") == 0)
 	}
+	return 0;
 }

@@ -1,5 +1,4 @@
 ﻿  main.cpp
-\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\main.cpp(45): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-  CircularBuffer.cpp
-  Generating Code...
+\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\main.cpp(49): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\main.cpp(45): warning C4101: 'currentMsg': unreferenced local variable
   shared.vcxproj -> \\storage10.student.bth.se\students\20142\dawi14\Visual Studio 2015\Projects\shared\Debug\shared.exe
