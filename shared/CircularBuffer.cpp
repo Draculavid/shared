@@ -11,7 +11,11 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 {
 	/*I guess, you will filemap here and try to filemap the second one as well
 	(the shared with the tail and the bipidibop), and store those adresses in 
-	the private variables*/
+	the private variables
+	
+	if the bool isProducer is true, then donw increase the client value, keep that at zero.
+	If it's false, then  increase it with a mutex and when the client > 0, the program will run,
+	i think...*/
 }
 
 CircularBuffer::~CircularBuffer()

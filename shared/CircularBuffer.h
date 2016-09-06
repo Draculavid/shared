@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <conio.h>
 #include <tchar.h>
+#include <time.h>
 
 class CircularBuffer
 {

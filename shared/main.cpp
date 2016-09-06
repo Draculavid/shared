@@ -38,8 +38,24 @@ size_t randomString(char *s, const size_t maxSize) {
 }
 #pragma endregion
 
-bool Producer()
+bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, LPCWSTR chunkMsg)
 {
+	if (strcmp((const char*)chunkMsg, "random") == 0)
+	{
+		srand(time(NULL));
+		//send to the random calc here, the one that calculates numbers only
+		//to fiund out the size, max size will be a 1/4 of the buffSize
+	}
+	/*In both of these function they should create a circularbuffer object
+	and then try to send messages, i guess.
+	
+	You need to fix so that it starts when all of the consumers and shit have
+	been connected. I think that the producer is supposed to be the last one to connect.
+	
+	Even if the producer is the first, we need to start sending when there is at least
+	one client present.*/
+
+	//CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
 	return false;
 }
 
@@ -61,7 +77,7 @@ int main(int argc, char* args[])
 
 		The second will be delay, it will be sent in milliseconds
 
-		The third argument will be memorySize, which will be the size
+		The third argument will be memorySize (buffsize), which will be the size
 		of memory we will allocate for the shared memory
 
 		The fourth is numMessages, which will dictate how many messages
@@ -73,7 +89,8 @@ int main(int argc, char* args[])
 		in each message.
 		*/
 
-		//if (strcmp(args[1], "Producer") == 0)
+		if (strcmp(args[1], "Producer") == 0)
+			int hejsan = 0;
 		//else if (strcmp(args[1], "Consumer") == 0)
 	}
 }
