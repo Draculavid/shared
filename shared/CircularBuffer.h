@@ -4,6 +4,9 @@
 #include <conio.h>
 #include <tchar.h>
 #include <time.h>
+#include <iostream>
+#include <string>
+#include <assert.h>
 
 class CircularBuffer
 {

@@ -96,7 +96,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 
 #pragma endregion
 
-	this->buffSize = buffSize;
+	this->buffSize = buffSize * 1<<10;
 	this->chunkSize = chunkSize;
 
 	if (!isProducer)
@@ -137,7 +137,36 @@ size_t CircularBuffer::canWrite()
 	/*Write a supercool function here that compares the
 	values of the head and last tail of the shared buffer,
 	then returns how many bytes that are free*/
-	return size_t();
+	/*getting the position of the head and the last tail*/
+	size_t tailPos = 0, headPos = 0;
+	memcpy(&tailPos, (void*)tail, sizeof(int));
+	memcpy(&headPos, (void*)head, sizeof(int));
+
+	if (tailPos != headPos)
+	{
+		if (tailPos > headPos)
+		{
+			return (buffSize - tailPos + headPos);
+		}
+		else if (tailPos < headPos)
+		{
+			return (buffSize - (headPos - tailPos));
+		}
+	}
+	else
+	{
+		size_t nrClients = 0;
+		memcpy(&nrClients, (void*)clients, sizeof(int));
+
+		/*if nrClients are 0, it means that all of the consumers have read the messages*/
+		if (nrClients == 0)
+		{
+			return (buffSize - tailPos);
+		}
+		else
+			return 0;
+	}
+	return 0;
 }
 
 bool CircularBuffer::push(const void * msg, size_t length)
@@ -156,27 +185,62 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			mHeader.length = length;
 			id++;
 
-			/*need to copy the message to write it in chunks*/
-			char* cpyMsg = new char[length];
-			memcpy(&cpyMsg, &msg, length);
-
 			/*calculating how much of the message we can fit at the end of the buffer*/
-			int fitLength = buffSize - (headPos + sizeof(Header));  //<------------------control this later so that the header doesnt cause problems
+			int fitLength = buffSize - (headPos + sizeof(Header)); 
 
-			/*writing the header to the virtual memory*/
-			memcpy((void*)currentPosition, &mHeader, sizeof(Header));
-			currentPosition += sizeof(Header);
+			/*calculating the diff in the if statement because they will behave differently
+			based on which of the roads the application will take*/
+			int diff = 0;
+			if (fitLength >= 0)
+			{
+				/*writing the header to the virtual memory*/
+				memcpy((void*)currentPosition, &mHeader, sizeof(Header));
+				currentPosition += sizeof(Header);
 
-			/*writing part of the message to the virtual memory*/
-			memcpy((void*)currentPosition, &msg, fitLength);
+				/*writing part of the message to the virtual memory*/
+				memcpy((void*)currentPosition, msg, fitLength);
 
-			/*resetting the position to the start of the circular buffer*/
-			currentPosition = cBuf;
+				/*resetting the position to the start of the circular buffer*/
+				currentPosition = cBuf;
+				headPos = 0;
+				diff = (length - fitLength) % chunkSize;
+			}
+			else
+			{
+				/*resetting the position to the start of the circular buffer*/
+				currentPosition = cBuf;
+				headPos = 0;
+				fitLength = 0;
 
+				memcpy((void*)currentPosition, &mHeader, sizeof(Header));
+
+				currentPosition += sizeof(Header);
+				headPos += sizeof(Header);
+				diff = (length + sizeof(Header)) % chunkSize;
+			}
+			char* sPartOfMsg = (char*)msg + fitLength; //<----------------------------see if this works
 			/*calculating and writing the rest of the message*/
-			memcpy((void*)currentPosition, &cpyMsg[length - fitLength], (length - fitLength));
+			//memcpy((void*)currentPosition, &cpyMsg[fitLength], (length - fitLength));
+			memcpy((void*)currentPosition, sPartOfMsg, (length - fitLength));
+			currentPosition += length - fitLength;
 
+			/*calculating the diff/padding*/
+			headPos += length - fitLength;
+			int padding = chunkSize - diff;
 
+			//int diff = (length - fitLength) % chunkSize;
+
+			/*updating the positions*/
+			headPos += padding;
+			currentPosition += padding;
+
+			/*updating the position of the header in the control message*/
+			memcpy((void*)head, &headPos, sizeof(int));
+
+			/*Print message*/
+			printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, msg);
+
+			/*returning true*/
 			return true;
 		}
 		else
@@ -192,7 +256,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			currentPosition += sizeof(Header);
 
 			/*writing the message to the virtual memory*/
-			memcpy((void*)currentPosition, &msg, length);
+			memcpy((void*)currentPosition, msg, length);
 			currentPosition += length;
 
 			/*calculating the head position so that it will be a multiple of the buffSize*/
@@ -201,12 +265,15 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			int diff = (length + sizeof(Header)) % chunkSize;  //sizeof(int)?? if it doesnt work, implement this
 			int padding = chunkSize - diff;
 
+			/*updating the positions*/
 			headPos += padding;
+			currentPosition += padding;
 
 			/*updating the position of the header in the control message*/
 			memcpy((void*)head, &headPos, sizeof(int));
 
 			/*Print the message*/
+			printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, msg);
 
 			/*returning true*/
 			return true;

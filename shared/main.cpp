@@ -74,7 +74,7 @@ bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, s
 			if (cBuffer.push(message, mLength))
 			{
 				msgSent = true;
-				msgSize--;
+				numMessages--;
 				Sleep(delay);
 			}
 			else
