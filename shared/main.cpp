@@ -74,6 +74,9 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			if (cBuffer.push(message, mLength))
 			{
 				//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
+				//just for testing
+				//cBuffer.closeEverything();
+
 				msgSent = true;
 				msgLeft--;
 				Sleep(delay);

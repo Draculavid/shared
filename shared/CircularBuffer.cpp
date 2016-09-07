@@ -103,7 +103,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	{
 		//set the client here with mutex
 		//anta att clienterna är först
-		this->numPosition = 0;
+		//this->numPosition = 0;
 	}
 	else
 	{
@@ -314,6 +314,8 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			currentPosition = cBuf;
 			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
 			currentPosition += sizeof(Header);
+			length = mHeader.length;
+			this->id = mHeader.id;
 
 			/*allocating memory for the message*/
 			msg = new char[mHeader.length];
@@ -328,6 +330,8 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 		{
 			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
 			currentPosition += sizeof(Header);
+			length = mHeader.length;
+			this->id = mHeader.id;
 
 			msg = new char[mHeader.length];
 
@@ -366,4 +370,15 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 	}
 
 	return false;
+}
+
+void CircularBuffer::closeEverything()
+{
+	//unmapping the views
+	UnmapViewOfFile(cBuf);
+	UnmapViewOfFile(sBuf);
+
+	//Closing the handles
+	CloseHandle(hMapFile);
+	CloseHandle(sMapFile);
 }

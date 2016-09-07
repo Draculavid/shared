@@ -58,6 +58,9 @@ public:
 	// in the memory. The memory is expected to be allocated by the program that calls
 	// this function.
 	bool pop(char* msg, size_t& length);
+
+	//just for testing
+	void closeEverything();
 };
 
 /*
