@@ -9,15 +9,10 @@ CircularBuffer::CircularBuffer()
 
 CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
 {
-	/*I guess, you will filemap here and try to filemap the second one as well
-	(the shared with the tail and the bipidibop), and store those adresses in 
-	the private variables
-	
+	/*
 	if the bool isProducer is true, then don't increase the client value, keep that at zero.
 	If it's false, then  increase it with a mutex and when the client > 0, the program will run,
 	i think...*/
-	//HANDLE hMapFile;
-	char * cBuf, sBuf;
 
 #pragma region declaring the main memory
 	hMapFile = CreateFileMapping(
@@ -39,7 +34,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		FILE_MAP_ALL_ACCESS,
 		0,
 		0,
-		chunkSize); //Chunksize here?????????????????????????
+		buffSize);
 
 	if (cBuf == NULL)
 	{
@@ -48,6 +43,10 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 
 		CloseHandle(hMapFile);
 	}
+
+	/* setting the current position */
+	currentPosition = cBuf;
+
 #pragma endregion
 
 #pragma region the second memory
@@ -57,8 +56,8 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		NULL,
 		PAGE_READWRITE,
 		0,
-		buffSize,
-		buffName);
+		12,
+		(LPCWSTR)"secondMemory");
 
 	if (sMapFile == NULL)
 	{
@@ -71,7 +70,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		FILE_MAP_ALL_ACCESS,
 		0,
 		0,
-		chunkSize); //Chunksize here?????????????????????????
+		buffSize);
 
 	if (sBuf == NULL)
 	{
@@ -80,13 +79,49 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 
 		CloseHandle(sMapFile);
 	}
+
+	/*Now setting the adresses to the control variables*/ 
+	int t1 = 0;
+	int h1 = 0;
+	int c1 = 0;
+	
+	tail = sBuf;
+	memcpy((void*)tail, &t1, sizeof(int));
+
+	head = tail + sizeof(int);
+	memcpy((void*)head, &h1, sizeof(int));
+
+	clients = head + sizeof(int);
+	memcpy((void*)clients, &c1, sizeof(int));
+
 #pragma endregion
 
+	this->buffSize = buffSize;
+	this->chunkSize = chunkSize;
 
+	if (!isProducer)
+	{
+		//set the client here with mutex
+		//anta att clienterna är först
+	}
+	else
+	{
+		this->id = 0;
+	}
 }
 
+	/*memcpy(&t1, (void*)tail, sizeof(int));
+	memcpy(&h1, (void*)head, sizeof(int));
+	memcpy(&c1, (void*)clients, sizeof(int));*/
 CircularBuffer::~CircularBuffer()
 {
+	//unmapping the views
+	UnmapViewOfFile(cBuf);
+	UnmapViewOfFile(sBuf);
+
+	//Closing the handles
+	CloseHandle(hMapFile);
+	CloseHandle(sMapFile);
 }
 
 size_t CircularBuffer::canRead()
@@ -109,6 +144,74 @@ bool CircularBuffer::push(const void * msg, size_t length)
 {
 	/*try to send a message, if it fails it will be false
 	then wait in the "main" function and try to send later*/
+	size_t freeMem = canWrite();
+	if (freeMem > length)
+	{
+		int headPos = 0;
+		memcpy(&headPos, (void*)head, sizeof(int));
+		if ((headPos + length + sizeof(Header)) > buffSize)
+		{
+			Header mHeader;
+			mHeader.id = this->id; //<--------------------------------------fix this later
+			mHeader.length = length;
+			id++;
+
+			/*need to copy the message to write it in chunks*/
+			char* cpyMsg = new char[length];
+			memcpy(&cpyMsg, &msg, length);
+
+			/*calculating how much of the message we can fit at the end of the buffer*/
+			int fitLength = buffSize - (headPos + sizeof(Header));  //<------------------control this later so that the header doesnt cause problems
+
+			/*writing the header to the virtual memory*/
+			memcpy((void*)currentPosition, &mHeader, sizeof(Header));
+			currentPosition += sizeof(Header);
+
+			/*writing part of the message to the virtual memory*/
+			memcpy((void*)currentPosition, &msg, fitLength);
+
+			/*resetting the position to the start of the circular buffer*/
+			currentPosition = cBuf;
+
+			/*calculating and writing the rest of the message*/
+			memcpy((void*)currentPosition, &cpyMsg[length - fitLength], (length - fitLength));
+
+
+			return true;
+		}
+		else
+		{
+			//Creating the header
+			Header mHeader;
+			mHeader.id = this->id; //<--------------------------------------fix this later
+			mHeader.length = length;
+			id++;
+
+			/*writing the header to the virtual memory*/
+			memcpy((void*)currentPosition, &mHeader, sizeof(Header));
+			currentPosition += sizeof(Header);
+
+			/*writing the message to the virtual memory*/
+			memcpy((void*)currentPosition, &msg, length);
+			currentPosition += length;
+
+			/*calculating the head position so that it will be a multiple of the buffSize*/
+			headPos += length + sizeof(Header);
+
+			int diff = (length + sizeof(Header)) % chunkSize;  //sizeof(int)?? if it doesnt work, implement this
+			int padding = chunkSize - diff;
+
+			headPos += padding;
+
+			/*updating the position of the header in the control message*/
+			memcpy((void*)head, &headPos, sizeof(int));
+
+			/*Print the message*/
+
+			/*returning true*/
+			return true;
+		}
+	}
 	return false;
 }
 

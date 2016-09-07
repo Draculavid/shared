@@ -38,22 +38,57 @@ size_t randomString(char *s, const size_t maxSize) {
 }
 #pragma endregion
 
-bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, size_t & numMessages, LPCWSTR chunkMsg)
+bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, size_t & numMessages, const size_t & chunkMsg)
 {
-	bool isRandom = false;
+	//just testing the constructor
+	CircularBuffer cBuffer(buffName, buffSize, true, 256);
+	srand(time(NULL));
 	/*the current message variable will tell the producer how many
 	messages are left to send */
-	if (strcmp((const char*)chunkMsg, "random") == 0)
-	{
-		srand(time(NULL));
-		isRandom = true;
-		//send to the random calc here, the one that calculates numbers only
-		//to fiund out the size, max size will be a 1/4 of the buffSize
-	}
+
+	//int diff = 320 % 256;
+	//int paddingx = 256 - diff;
+
+
+	
 	while (numMessages > 0)
 	{
+		/*skapa meddelandet sen skicka (OBS skicka även längden på meddelandet), går det inte, lägg en sleep och testa igen*/
+		//a bool variable to check if the message was sent
+		bool msgSent = false;
 
+		/*calculating the size of the message*/
+		size_t msgSize;
+		if (chunkMsg == 0)
+			msgSize = random(1, random(1, buffSize / 4));
+		else
+			msgSize = random(1, chunkMsg);
+
+		/*Creating the message*/
+		char* message = new char[msgSize];
+		size_t mLength = randomString(message, msgSize);
+		
+		/*A loop that tries to sent the message over and over until it's sent*/
+		while (!msgSent)
+		{
+			if (cBuffer.push(message, mLength))
+			{
+				msgSent = true;
+				msgSize--;
+				Sleep(delay);
+			}
+			else
+			{
+				Sleep(10);
+			}
+		}
+
+		/*deleting the message so that there will be no memory leaks*/
+		delete message;
 	}
+
+	//perhaps another while loop to control that all the clients have recieved their messages
+
 	/*In both of these function they should create a circularbuffer object
 	and then try to send messages, i guess.
 	
@@ -101,9 +136,15 @@ int main(int argc, char* args[])
 		size_t delay = atoi(args[2]);
 		size_t buffSize = atoi(args[3]);
 		size_t numMessages = atoi(args[4]);
+		size_t chunkSize;
+
+		if (strcmp(args[5], "random") == 0)
+			chunkSize = 0;
+		else
+			chunkSize = atoi(args[5]);
 
 		if (strcmp(args[1], "Producer") == 0)
-			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, (LPCWSTR)args[5]);
+			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
 		//else if (strcmp(args[1], "Consumer") == 0)
 	}
 	return 0;

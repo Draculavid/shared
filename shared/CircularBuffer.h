@@ -11,14 +11,23 @@ private:
 	//The handles for the filemaps
 	HANDLE hMapFile, sMapFile;
 
+	//variables
+	size_t chunkSize; //the multiple
+	size_t buffSize;
+	size_t id; //<------------only for the producer, fix later if there's time and you figure something increadibly smart out
+
 	//the variables that hold the addresses for the shared values
 	char* tail;
 	char* head;
 	char* clients;
+	char* currentPosition;
+
+	//the variables that hold the viewmapfile
+	char* cBuf, *sBuf;
 
 	struct Header
 	{
-		size_t id;
+		size_t id; //The program will print this to confirm that the correct message was read
 		size_t length;
 		/*Just using two variables as the third (offset) will be
 		  redundant, considering that the length will be a multiple
