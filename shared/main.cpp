@@ -38,7 +38,7 @@ size_t randomString(char *s, const size_t maxSize) {
 }
 #pragma endregion
 
-bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, size_t & numMessages, const size_t & chunkMsg)
+void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
 {
 	//just testing the constructor
 	CircularBuffer cBuffer(buffName, buffSize, true, 256);
@@ -48,10 +48,10 @@ bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, s
 
 	//int diff = 320 % 256;
 	//int paddingx = 256 - diff;
-
+	size_t msgLeft = numMessages;
 
 	
-	while (numMessages > 0)
+	while (msgLeft > 0)
 	{
 		/*skapa meddelandet sen skicka (OBS skicka även längden på meddelandet), går det inte, lägg en sleep och testa igen*/
 		//a bool variable to check if the message was sent
@@ -73,8 +73,9 @@ bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, s
 		{
 			if (cBuffer.push(message, mLength))
 			{
+				//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
 				msgSent = true;
-				numMessages--;
+				msgLeft--;
 				Sleep(delay);
 			}
 			else
@@ -101,12 +102,34 @@ bool Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, s
 	delay will be used for the sleep function between the messages*/
 
 	//CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
-	return false;
 }
 
-bool Consumer()
+void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages)
 {
-	return false;
+	CircularBuffer cBuffer(buffName, buffSize, false, 256);
+	size_t msgLeft = numMessages;
+	while (msgLeft > 0)
+	{
+		//Creating the variable that will hold the message
+		char* msg = NULL; 
+		size_t length;
+
+		bool msgRecieved = false;
+		while (!msgRecieved)
+		{
+			if (cBuffer.pop(msg, length))
+			{
+				msgRecieved = false;
+				msgLeft--;
+				Sleep(delay);
+			}
+			else
+			{
+				Sleep(10); //is this where i'm supposed to use the delay?
+			}
+		}
+		delete msg;
+	}
 }
 
 int main(int argc, char* args[])
@@ -145,7 +168,8 @@ int main(int argc, char* args[])
 
 		if (strcmp(args[1], "Producer") == 0)
 			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
-		//else if (strcmp(args[1], "Consumer") == 0)
+		else if (strcmp(args[1], "Consumer") == 0)
+			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
 	}
 	return 0;
 }

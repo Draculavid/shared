@@ -5,8 +5,6 @@
 #include <tchar.h>
 #include <time.h>
 #include <iostream>
-#include <string>
-#include <assert.h>
 
 class CircularBuffer
 {
@@ -18,6 +16,7 @@ private:
 	size_t chunkSize; //the multiple
 	size_t buffSize;
 	size_t id; //<------------only for the producer, fix later if there's time and you figure something increadibly smart out
+	//size_t numPosition;
 
 	//the variables that hold the addresses for the shared values
 	char* tail;

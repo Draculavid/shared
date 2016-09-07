@@ -103,6 +103,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	{
 		//set the client here with mutex
 		//anta att clienterna är först
+		this->numPosition = 0;
 	}
 	else
 	{
@@ -110,9 +111,6 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	}
 }
 
-	/*memcpy(&t1, (void*)tail, sizeof(int));
-	memcpy(&h1, (void*)head, sizeof(int));
-	memcpy(&c1, (void*)clients, sizeof(int));*/
 CircularBuffer::~CircularBuffer()
 {
 	//unmapping the views
@@ -129,7 +127,20 @@ size_t CircularBuffer::canRead()
 	/*connect this function to the shared head and
 	compare it to the last tail, or if it just returns
 	the current position of the head??*/
-	return size_t();
+	size_t headPos = 0;
+	memcpy(&headPos, (void*)head, sizeof(int));
+	if ((currentPosition - cBuf) != headPos)
+	{
+		if ((currentPosition - cBuf) > headPos)
+		{
+			return 1;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+	return 0;
 }
 
 size_t CircularBuffer::canWrite()
@@ -273,6 +284,9 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			memcpy((void*)head, &headPos, sizeof(int));
 
 			/*Print the message*/
+
+			int poz = currentPosition - cBuf;
+
 			printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, msg);
 
 			/*returning true*/
@@ -290,5 +304,66 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 	
 	Also try to read the message, if the message cannot be read
 	return false and don't tamper with the clients in the shared buffer*/
+
+	//size_t readable = canRead();
+	if (canRead() > 0)
+	{
+		Header mHeader;
+		if ((currentPosition - cBuf) + sizeof(Header) > buffSize)
+		{
+			currentPosition = cBuf;
+			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
+			currentPosition += sizeof(Header);
+
+			/*allocating memory for the message*/
+			msg = new char[mHeader.length];
+			memcpy(&msg, (void*)currentPosition, mHeader.length);
+			currentPosition += mHeader.length;
+
+			int diff = (length + sizeof(Header)) % chunkSize;
+			int padding = chunkSize - diff;
+			currentPosition += padding;
+		}
+		else
+		{
+			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
+			currentPosition += sizeof(Header);
+
+			msg = new char[mHeader.length];
+
+			/* if the length is bigger than the buffer, the producer will have written part of the message
+			in the end of the buffer and the rest in the front. */
+			if (((currentPosition - cBuf) + mHeader.length) > buffSize)
+			{
+				/*calculating and reading part of the message*/
+				int fitLength = buffSize - ((currentPosition-cBuf) + sizeof(Header)); //<--------------------------look at this function, to see if it works during runtime
+				memcpy(&msg, (void*)currentPosition, fitLength);
+
+				/*reading the rest of the message*/
+				currentPosition = cBuf;
+				memcpy(&msg[fitLength], (void*)currentPosition, (length - fitLength));
+				currentPosition += (length - fitLength);
+
+				/*calculating the rest of the padding*/
+				int diff = (length - fitLength) % chunkSize;
+				int padding = chunkSize - diff;
+				currentPosition += padding;
+			}
+			else
+			{
+				/*copying the message in the buffer*/
+				memcpy(&msg, (void*)currentPosition, mHeader.length);
+				currentPosition += mHeader.length;
+
+				/*calculating the offset*/
+				int diff = (length + sizeof(Header)) % chunkSize;
+				int padding = chunkSize - diff;
+				currentPosition += padding;
+			}
+		}
+		//MUTEX HERE<-------------------------------------------
+		return true;
+	}
+
 	return false;
 }
