@@ -1,5 +1,3 @@
 ﻿  CircularBuffer.cpp
-\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\circularbuffer.cpp(180): warning C4018: '>': signed/unsigned mismatch
-\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\circularbuffer.cpp(341): warning C4477: 'printf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'const void *'
-\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\circularbuffer.cpp(385): warning C4477: 'printf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'const void *'
+\\storage10.student.bth.se\students\20142\dawi14\visual studio 2015\projects\shared\shared\circularbuffer.cpp(185): warning C4018: '>': signed/unsigned mismatch
   shared.vcxproj -> \\storage10.student.bth.se\students\20142\dawi14\Visual Studio 2015\Projects\shared\Debug\shared.exe

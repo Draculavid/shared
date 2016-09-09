@@ -19,9 +19,9 @@ private:
 	//size_t numPosition;
 
 	//the variables that hold the addresses for the shared values
-	char* tail;
-	char* head;
-	char* clients;
+	size_t* tail;
+	size_t* head;
+	size_t* clients;
 	char* currentPosition;
 
 	//the variables that hold the viewmapfile
