@@ -29,8 +29,10 @@ private:
 
 	struct Header
 	{
-		size_t id; //The program will print this to confirm that the correct message was read
+		size_t id;
 		size_t length;
+		size_t nrClientsLeft;
+
 		/*Just using two variables as the third (offset) will be
 		  redundant, considering that the length will be a multiple
 		  of 256

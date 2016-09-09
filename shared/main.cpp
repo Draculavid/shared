@@ -22,19 +22,19 @@ size_t random(size_t min, size_t max)
 
 size_t randomString(char *s, const size_t maxSize) {
 
-	size_t rLen = random(1, maxSize);
+	//size_t rLen = random(1, maxSize); <------------------------------ dont forget this
 	static const char alphanum[] =
 		"0123456789"
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"abcdefghijklmnopqrstuvwxyz";
 
-	for (size_t i = 0; i < rLen; ++i) {
+	for (size_t i = 0; i < maxSize; ++i) {
 		s[i] = alphanum[random(1, sizeof(alphanum))];
 	}
 
-	s[rLen] = '\0';
+	s[maxSize] = '\0';
 
-	return rLen;
+	return maxSize;
 }
 #pragma endregion
 
@@ -49,6 +49,8 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 	//int diff = 320 % 256;
 	//int paddingx = 256 - diff;
 	size_t msgLeft = numMessages;
+	char* msg1 = new char[756];
+	size_t l1 = randomString(msg1, 756);
 
 	
 	while (msgLeft > 0)
@@ -58,37 +60,51 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		bool msgSent = false;
 
 		/*calculating the size of the message*/
-		size_t msgSize;
-		if (chunkMsg == 0)
-			msgSize = random(1, random(1, buffSize / 4));
-		else
-			msgSize = random(1, chunkMsg);
+		//size_t msgSize;
+		//if (chunkMsg == 0)
+		//	msgSize = random(1, random(1, (buffSize * 1<<10) / 4));
+		//else
+		//	msgSize = random(1, chunkMsg);
 
-		/*Creating the message*/
-		char* message = new char[msgSize];
-		size_t mLength = randomString(message, msgSize);
+		///*Creating the message*/
+		//char* message = new char[msgSize];
+		//size_t mLength = randomString(message, msgSize);
+
+
+		//just for testing
+
+		//char* msg2 = new char[500];
+		//size_t l2 = randomString(msg2, 512);
 		
 		/*A loop that tries to sent the message over and over until it's sent*/
 		while (!msgSent)
 		{
-			if (cBuffer.push(message, mLength))
+			if (cBuffer.push(msg1, l1))
 			{
-				//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
-				//just for testing
-				//cBuffer.closeEverything();
-
 				msgSent = true;
-				msgLeft--;
-				Sleep(delay);
 			}
 			else
 			{
 				Sleep(10);
 			}
+			//if (cBuffer.push(message, mLength))
+			//{
+			//	//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
+			//	//just for testing
+			//	//cBuffer.closeEverything();
+
+			//	msgSent = true;
+			//	msgLeft--;
+			//	Sleep(delay);
+			//}
+			//else
+			//{
+			//	Sleep(10);
+			//}
 		}
 
 		/*deleting the message so that there will be no memory leaks*/
-		delete message;
+		//delete message;
 	}
 
 	//perhaps another while loop to control that all the clients have recieved their messages
@@ -111,6 +127,8 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 {
 	CircularBuffer cBuffer(buffName, buffSize, false, 256);
 	size_t msgLeft = numMessages;
+	char* msg = new char[buffSize];
+
 	while (msgLeft > 0)
 	{
 		//Creating the variable that will hold the message
@@ -122,7 +140,8 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.pop(msg, length))
 			{
-				msgRecieved = false;
+				//printf("Consumer\nid: %d\nMessage: %s\n", cBuffer.getId(), msg); temporary
+				msgRecieved = true;
 				msgLeft--;
 				Sleep(delay);
 			}
@@ -131,8 +150,8 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 				Sleep(10); //is this where i'm supposed to use the delay?
 			}
 		}
-		delete msg;
 	}
+	delete msg;
 }
 
 int main(int argc, char* args[])
@@ -170,9 +189,10 @@ int main(int argc, char* args[])
 			chunkSize = atoi(args[5]);
 
 		if (strcmp(args[1], "Producer") == 0)
-			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
+			Producer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages, chunkSize);
 		else if (strcmp(args[1], "Consumer") == 0)
-			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
+			Consumer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages);
 	}
+	//getchar();
 	return 0;
 }
