@@ -2,6 +2,14 @@
 
 
 
+size_t CircularBuffer::padCalc(size_t msgSize, size_t chunkSize)
+{
+	size_t ret = ((msgSize / chunkSize) + 1)*chunkSize - msgSize;
+	if (ret == chunkSize)
+		ret = 0;
+	return ret;
+}
+
 CircularBuffer::CircularBuffer()
 {
 }
@@ -45,7 +53,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	}
 
 	/* setting the current position */
-	currentPosition = cBuf;
+	//currentPosition = cBuf;
 
 #pragma endregion
 
@@ -99,7 +107,10 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 
 
 #pragma endregion
-
+#pragma region mutex declaration
+	mutex = CreateMutex(nullptr, false, L"TheSuperMutalisk");
+#pragma endregion
+	this->idOrOffset = 0;
 	this->buffSize = buffSize * 1<<10;
 	this->chunkSize = chunkSize;
 
@@ -110,13 +121,9 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		{
 			try
 			{
-				//int newClient = 0;
-				//mutex here <-------------------------------------------
+				WaitForSingleObject(mutex, INFINITE);
 				*clients += 1;
-				//memcpy(&newClient, (void*)clients, sizeof(int));
-				//newClient++;
-				//memcpy((void*)clients, &newClient, sizeof(int));
-				//unlock mutex here <------------------------------------
+				ReleaseMutex(mutex);
 				break;
 			}
 			catch(...)
@@ -127,7 +134,6 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	}
 	else
 	{
-		this->id = 0;
 		while (true)
 		{
 			try
@@ -171,35 +177,34 @@ CircularBuffer::~CircularBuffer()
 	//Closing the handles
 	CloseHandle(hMapFile);
 	CloseHandle(sMapFile);
+	CloseHandle(mutex);
 }
 
-size_t CircularBuffer::canRead()
+bool CircularBuffer::canRead() 
 {
 	/*connect this function to the shared head and
 	compare it to the last tail, or if it just returns
 	the current position of the head??*/
-	size_t headPos = 0;
-	memcpy(&headPos, (void*)head, sizeof(int));
-	if ((currentPosition - cBuf) != headPos)
+	if (idOrOffset != *head)
 	{
-		if ((currentPosition - cBuf) > headPos)
+		if (idOrOffset > *head)
 		{
-			return 1;
+			return true;
 		}
 		else
 		{
-			return 1;
+			return true;
 		}
 	}
 	else
 	{
-		Header mHeader;
+		Header *mHeader;
 
 		while (true)
 		{
 			try
 			{
-				memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
+				memcpy(mHeader, (Header*)cBuf + idOrOffset, sizeof(Header));
 				break;
 			}
 			catch (...)
@@ -207,12 +212,12 @@ size_t CircularBuffer::canRead()
 				Sleep(5);
 			}
 		}
-		if (mHeader.nrClientsLeft > 0)
+		if (mHeader->nrClientsLeft > 0)
 		{
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 size_t CircularBuffer::canWrite()
@@ -238,7 +243,7 @@ size_t CircularBuffer::canWrite()
 	}
 	else /*<--------------------------------------------------------------look at this one later*/
 	{
-		Header mHeader;
+		Header* mHeader;
 
 		/*inserting a loop here just for precausion.
 		Because if the memory cannot be read it means
@@ -248,7 +253,7 @@ size_t CircularBuffer::canWrite()
 		{
 			try
 			{
-				memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
+				memcpy(mHeader, (Header*)cBuf + *head, sizeof(Header));
 				break;
 			}
 			catch (...)
@@ -258,7 +263,7 @@ size_t CircularBuffer::canWrite()
 		}
 
 		/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-		if (mHeader.nrClientsLeft == 0)
+		if (mHeader->nrClientsLeft == 0)
 		{
 			return buffSize;
 		}
@@ -272,7 +277,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 {
 	if (canWrite() > length)
 	{
-		Header mHeader{ this->id++, length, *clients };
+		Header mHeader{ this->idOrOffset++, length, *clients };
 		if ((*head + length + sizeof(Header)) > buffSize)
 		{
 			if ((*head + sizeof(Header)) <= buffSize)
@@ -281,16 +286,16 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)(cBuf + *head), &mHeader, sizeof(Header));
 
 				/*calculating how many characters will fit into the rest of the memory*/
-				int fitLength = buffSize - length - sizeof(Header);
+				size_t fitLength = buffSize - (length + sizeof(Header)) - sizeof(Header);
 
 				/*writing the first part of the message*/
 				memcpy((void*)(cBuf + *head + sizeof(Header)), msg, fitLength);
 
 				/*writing the rest of the message*/
-				memcpy((void*)cBuf, &msg + fitLength, length - fitLength); //check this one <------------------------------
+				memcpy((void*)cBuf, (char*)msg + fitLength, length - fitLength); //check this one <------------------------------
 
 				/*updating the head position*/
-				*head = ((length - fitLength) % buffSize);
+				*head = ((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize); //check this one as well<--------------------
 			}
 			else /*If nothing fits in the end of the buffer*/
 			{
@@ -301,7 +306,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)(cBuf + sizeof(Header)), msg, length);
 
 				/*updating the head position*/
-				*head = ((length + sizeof(Header)) % buffSize);
+				*head = ((length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
 			}
 		}
 		else /*if the message length isn't longer than the memory end*/
@@ -313,7 +318,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			memcpy((void*)(cBuf + *head + sizeof(Header)), msg, length);
 
 			/*updating the head position*/
-			*head = ((*head + length + sizeof(Header)) % buffSize);
+			*head = ((*head + length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
 		}
 		return true;
 	}
@@ -322,129 +327,105 @@ bool CircularBuffer::push(const void * msg, size_t length)
 
 bool CircularBuffer::pop(char * msg, size_t & length)
 {
-	/*Perhaps try to implement the mutex here which will
-	control the clients, and if there are no clients move
-	the last tail?
-	
-	Also try to read the message, if the message cannot be read
-	return false and don't tamper with the clients in the shared buffer*/
-
-	//size_t readable = canRead();
-	if (canRead() > 0)
+	if (canRead())
 	{
-		Header mHeader;
 		bool isLast = false;
-		if ((currentPosition - cBuf) + sizeof(Header) > buffSize)
+		if (this->idOrOffset + sizeof(Header) > buffSize) /*if the header didn't fit at the end of the buffer*/
 		{
-			currentPosition = cBuf;
-			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
-			length = mHeader.length;
-			this->id = mHeader.id;
-			mHeader.nrClientsLeft--;
+			Header *mHeader = (Header*)cBuf;
+			length = mHeader->length;
 
+			/*changing contents, so using a mutex*/
 			while (true)
 			{
 				try
 				{
-					//mutex here<-----------------------------
-					memcpy((void*)currentPosition, &mHeader, sizeof(size_t));
-					//unlock mutex here
+					WaitForSingleObject(mutex, INFINITE);
+					mHeader->nrClientsLeft--;
+					if (mHeader->nrClientsLeft == 0)
+						isLast = true;
+					ReleaseMutex(mutex);
 					break;
 				}
 				catch (...)
 				{
 					Sleep(5);
-					memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
-					mHeader.nrClientsLeft--;
 				}
 			}
 
-			/*moving the currentposition/checking if it's the last tail*/
-			currentPosition += sizeof(Header);
-			if (mHeader.nrClientsLeft == 0)
-				isLast = true;
+			/*getting the message*/
+			memcpy(msg, (void*)(cBuf + sizeof(Header)), mHeader->length);
 
-			/*allocating memory for the message*/
-			//msg = new char[mHeader.length];
-			memcpy(msg, (void*)currentPosition, mHeader.length);
-			currentPosition += mHeader.length;
-
-			int diff = (length + sizeof(Header)) % chunkSize;
-			int padding = chunkSize - diff;
-			currentPosition += padding;
+			/*updating the internal tail*/
+			this->idOrOffset = (size_t)((sizeof(Header) + mHeader->length) % buffSize) + padCalc(mHeader->length + sizeof(Header), chunkSize);
 		}
-		else
+		else /*if there's at least a header at the chosen memory location*/
 		{
-			memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
-			length = mHeader.length;
-			this->id = mHeader.id;
-			mHeader.nrClientsLeft--;
+			/*getting the header*/
+			Header *mHeader = (Header*)(cBuf + idOrOffset);
+			length = mHeader->length;
 
+			/*changing contents, so using a mutex*/
 			while (true)
 			{
 				try
 				{
-					//mutex here<-----------------------------
-					memcpy((void*)currentPosition, &mHeader, sizeof(size_t));
-					//unlock mutex here
+					WaitForSingleObject(mutex, INFINITE);
+					mHeader->nrClientsLeft--;
+					if (mHeader->nrClientsLeft == 0)
+						isLast = true;
+					ReleaseMutex(mutex);
 					break;
 				}
 				catch (...)
 				{
 					Sleep(5);
-					memcpy(&mHeader, (void*)currentPosition, sizeof(Header));
-					mHeader.nrClientsLeft--;
 				}
 			}
-			//msg = new char[mHeader.length];
-			/*moving the currentposition/checking if it's the last tail*/
-			currentPosition += sizeof(Header);
-			if (mHeader.nrClientsLeft == 0)
-				isLast = true;
 
-			/* if the length is bigger than the buffer, the producer will have written part of the message
-			in the end of the buffer and the rest in the front. */
-			if (((currentPosition - cBuf) + mHeader.length) > buffSize)
+			if (this->idOrOffset + mHeader->length > buffSize)  /*Part of the message is at the end of the buffer*/
 			{
-				/*calculating and reading part of the message*/
-				int fitLength = buffSize - ((currentPosition-cBuf) + sizeof(Header)); //<--------------------------look at this function, to see if it works during runtime
-				memcpy(msg, (void*)currentPosition, fitLength);
+				/*calculating how many characters are at the rest of the memory*/
+				size_t fitLength = buffSize - (mHeader->length + sizeof(Header)) - sizeof(Header);
 
-				/*reading the rest of the message*/
-				currentPosition = cBuf;
-				memcpy(msg + fitLength, (void*)currentPosition, (length - fitLength)); //<----------------------------look to see if it works, does not work
-				currentPosition += (length - fitLength);
+				/*getting the first part of the emssage*/
+				memcpy(msg, (void*)(cBuf + idOrOffset + sizeof(Header)), fitLength);
 
-				/*calculating the rest of the padding*/
-				int diff = (length - fitLength) % chunkSize;
-				int padding = chunkSize - diff;
-				currentPosition += padding;
+				/*getting the second part*/
+				memcpy((msg + fitLength), (void*)cBuf, mHeader->length - fitLength);
+
+				/*updating the internal tail*/
+				this->idOrOffset = (size_t)((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
 			}
 			else
 			{
-				/*copying the message in the buffer*/
-				memcpy(msg, (void*)currentPosition, mHeader.length);
-				currentPosition += mHeader.length;
+				/*getting the message*/
+				memcpy(msg, (void*)(cBuf + sizeof(Header) + idOrOffset), mHeader->length);
 
-				/*calculating the offset*/
-				int diff = (length + sizeof(Header)) % chunkSize;
-				int padding = chunkSize - diff;
-				currentPosition += padding;
+				/*updating the internal tail*/
+				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length) % buffSize + padCalc(mHeader->length + sizeof(Header), chunkSize);
 			}
 		}
 		if (isLast)
 		{
-			int newTail = currentPosition - cBuf;
-			if (newTail == buffSize)
+			/*changing contents, so using a mutex*/
+			while (true)
 			{
-				newTail = 0;
-				currentPosition = cBuf;
+				try
+				{
+					WaitForSingleObject(mutex, INFINITE);
+					*tail = this->idOrOffset;
+					ReleaseMutex(mutex);
+					break;
+				}
+				catch (...)
+				{
+					Sleep(5);
+				}
 			}
-			memcpy((void*)tail, &newTail, sizeof(int));
 		}
 		return true;
 	}
-
 	return false;
 }
 
@@ -457,4 +438,5 @@ void CircularBuffer::closeEverything()
 	//Closing the handles
 	CloseHandle(hMapFile);
 	CloseHandle(sMapFile);
+	CloseHandle(mutex);
 }

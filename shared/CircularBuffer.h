@@ -10,22 +10,24 @@ class CircularBuffer
 {
 private:
 	//The handles for the filemaps
-	HANDLE hMapFile, sMapFile;
+	HANDLE hMapFile, sMapFile, mutex;
 
 	//variables
 	size_t chunkSize; //the multiple
 	size_t buffSize;
-	size_t id; //<------------only for the producer, fix later if there's time and you figure something increadibly smart out
+	size_t idOrOffset; 
 	//size_t numPosition;
 
 	//the variables that hold the addresses for the shared values
 	size_t* tail;
 	size_t* head;
 	size_t* clients;
-	char* currentPosition;
+	//char* currentPosition;
 
 	//the variables that hold the viewmapfile
 	char* cBuf, *sBuf;
+
+	size_t padCalc(size_t msgSize, size_t chunkSize);
 
 	struct Header
 	{
@@ -39,6 +41,8 @@ private:
 		  */
 	};
 	CircularBuffer();
+	bool canRead();  
+	size_t canWrite(); //<--------------------------------------------------make bool later
 public:
 	//constructor
 	CircularBuffer(
@@ -50,11 +54,6 @@ public:
 	//destructor
 	~CircularBuffer();
 
-	size_t canRead();  // returns how many bytes are available for reading. 
-	size_t canWrite(); // returns how many bytes are free in the buffer.
-					   // try to send a message through the buffer,
-					   // if returns true then it succeeded, otherwise the message has not been sent.
-					   // it should return false if the buffer does not have enough space.
 	bool push(const void* msg, size_t length);
 	// try to read a message from the buffer, and the implementation puts the content
 	// in the memory. The memory is expected to be allocated by the program that calls

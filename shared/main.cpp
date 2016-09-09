@@ -36,6 +36,17 @@ size_t randomString(char *s, const size_t maxSize) {
 
 	return maxSize;
 }
+void gen_random(char *s, const int len) {
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz";
+
+	for (auto i = 0; i < len; ++i) {
+		s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+	s[len] = 0;
+}
 #pragma endregion
 
 void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
@@ -50,7 +61,8 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 	//int paddingx = 256 - diff;
 	size_t msgLeft = numMessages;
 	char* msg1 = new char[756];
-	size_t l1 = randomString(msg1, 756);
+	size_t l1 = 756;
+	gen_random(msg1, l1);
 
 	
 	while (msgLeft > 0)
@@ -81,7 +93,9 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.push(msg1, l1))
 			{
+				printf("%d %s\n", msgLeft, msg1);
 				msgSent = true;
+				msgLeft--;
 			}
 			else
 			{
@@ -141,6 +155,7 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			if (cBuffer.pop(msg, length))
 			{
 				//printf("Consumer\nid: %d\nMessage: %s\n", cBuffer.getId(), msg); temporary
+				printf("%d %s", msgLeft, msg);
 				msgRecieved = true;
 				msgLeft--;
 				Sleep(delay);
@@ -189,9 +204,9 @@ int main(int argc, char* args[])
 			chunkSize = atoi(args[5]);
 
 		if (strcmp(args[1], "Producer") == 0)
-			Producer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages, chunkSize);
+			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
 		else if (strcmp(args[1], "Consumer") == 0)
-			Consumer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages);
+			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
 	}
 	//getchar();
 	return 0;
