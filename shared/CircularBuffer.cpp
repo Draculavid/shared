@@ -198,13 +198,14 @@ bool CircularBuffer::canRead()
 	}
 	else
 	{
-		Header *mHeader;
+		Header *mHeader = nullptr;
 
 		while (true)
 		{
 			try
 			{
-				memcpy(mHeader, (Header*)cBuf + idOrOffset, sizeof(Header));
+				//memcpy(mHeader, (Header*)cBuf + idOrOffset, sizeof(Header));
+				mHeader = (Header*)cBuf + idOrOffset;
 				break;
 			}
 			catch (...)
@@ -243,7 +244,7 @@ size_t CircularBuffer::canWrite()
 	}
 	else /*<--------------------------------------------------------------look at this one later*/
 	{
-		Header* mHeader;
+		Header* mHeader = nullptr;
 
 		/*inserting a loop here just for precausion.
 		Because if the memory cannot be read it means
@@ -253,7 +254,8 @@ size_t CircularBuffer::canWrite()
 		{
 			try
 			{
-				memcpy(mHeader, (Header*)cBuf + *head, sizeof(Header));
+				//memcpy(mHeader, (Header*)cBuf + *head, sizeof(Header));
+				mHeader = (Header*)cBuf + *head;
 				break;
 			}
 			catch (...)

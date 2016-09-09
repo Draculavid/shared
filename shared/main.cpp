@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#pragma region the random functions
+#pragma region the random function
 size_t random(size_t min, size_t max)
 {
 	int range, result, cutoff;
@@ -18,23 +18,6 @@ size_t random(size_t min, size_t max)
 	} while (result >= cutoff);
 
 	return result % range + min;
-}
-
-size_t randomString(char *s, const size_t maxSize) {
-
-	//size_t rLen = random(1, maxSize); <------------------------------ dont forget this
-	static const char alphanum[] =
-		"0123456789"
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"abcdefghijklmnopqrstuvwxyz";
-
-	for (size_t i = 0; i < maxSize; ++i) {
-		s[i] = alphanum[random(1, sizeof(alphanum))];
-	}
-
-	s[maxSize] = '\0';
-
-	return maxSize;
 }
 void gen_random(char *s, const int len) {
 	static const char alphanum[] =
@@ -60,9 +43,9 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 	//int diff = 320 % 256;
 	//int paddingx = 256 - diff;
 	size_t msgLeft = numMessages;
-	char* msg1 = new char[756];
-	size_t l1 = 756;
-	gen_random(msg1, l1);
+	//char* msg1 = new char[756];
+	//size_t l1 = 756;
+	//gen_random(msg1, l1);
 
 	
 	while (msgLeft > 0)
@@ -72,69 +55,37 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		bool msgSent = false;
 
 		/*calculating the size of the message*/
-		//size_t msgSize;
-		//if (chunkMsg == 0)
-		//	msgSize = random(1, random(1, (buffSize * 1<<10) / 4));
-		//else
-		//	msgSize = random(1, chunkMsg);
+		size_t msgSize;
+		if (chunkMsg == 0)
+			msgSize = random(1, (buffSize * 1 << 10) / 4);
+		else
+			msgSize = chunkMsg;
 
-		///*Creating the message*/
-		//char* message = new char[msgSize];
-		//size_t mLength = randomString(message, msgSize);
+		/*Creating the message*/
+		char* message = new char[msgSize];
 
-
-		//just for testing
-
-		//char* msg2 = new char[500];
-		//size_t l2 = randomString(msg2, 512);
+		gen_random(message, msgSize);
 		
 		/*A loop that tries to sent the message over and over until it's sent*/
 		while (!msgSent)
 		{
-			if (cBuffer.push(msg1, l1))
+			if (cBuffer.push(message, msgSize))
 			{
-				printf("%d %s\n", msgLeft, msg1);
+				//printf("%d %s\n", msgLeft, message);
+				std::cout << msgLeft << " " << message << "\n";
 				msgSent = true;
 				msgLeft--;
+				Sleep(delay);
 			}
 			else
 			{
-				Sleep(10);
+				Sleep(delay);
 			}
-			//if (cBuffer.push(message, mLength))
-			//{
-			//	//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
-			//	//just for testing
-			//	//cBuffer.closeEverything();
-
-			//	msgSent = true;
-			//	msgLeft--;
-			//	Sleep(delay);
-			//}
-			//else
-			//{
-			//	Sleep(10);
-			//}
 		}
 
 		/*deleting the message so that there will be no memory leaks*/
-		//delete message;
+		delete message;
 	}
-
-	//perhaps another while loop to control that all the clients have recieved their messages
-
-	/*In both of these function they should create a circularbuffer object
-	and then try to send messages, i guess.
-	
-	You need to fix so that it starts when all of the consumers and shit have
-	been connected. I think that the producer is supposed to be the last one to connect.
-	
-	Even if the producer is the first, we need to start sending when there is at least
-	one client present.
-	
-	delay will be used for the sleep function between the messages*/
-
-	//CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
 }
 
 void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages)
@@ -155,14 +106,15 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			if (cBuffer.pop(msg, length))
 			{
 				//printf("Consumer\nid: %d\nMessage: %s\n", cBuffer.getId(), msg); temporary
-				printf("%d %s", msgLeft, msg);
+				//printf("%d %s", msgLeft, msg);
+				std::cout << msgLeft << " " << msg << "\n";
 				msgRecieved = true;
 				msgLeft--;
 				Sleep(delay);
 			}
 			else
 			{
-				Sleep(10); //is this where i'm supposed to use the delay?
+				Sleep(delay); //is this where i'm supposed to use the delay?
 			}
 		}
 	}
