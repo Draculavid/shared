@@ -17,11 +17,6 @@ CircularBuffer::CircularBuffer()
 
 CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
 {
-	/*
-	if the bool isProducer is true, then don't increase the client value, keep that at zero.
-	If it's false, then  increase it with a mutex and when the client > 0, the program will run,
-	i think...*/
-
 #pragma region declaring the main memory
 	hMapFile = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
@@ -52,11 +47,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		CloseHandle(hMapFile);
 	}
 
-	/* setting the current position */
-	//currentPosition = cBuf;
-
 #pragma endregion
-
 #pragma region the second memory
 	//declaring a second memory to be used for control.
 	sMapFile = CreateFileMapping(
@@ -87,22 +78,14 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 
 		CloseHandle(sMapFile);
 	}
-
-	/*Now setting the adresses to the control variables*/ 
-	//int t1 = 0;
-	//int h1 = 0;
-	//int c1 = 0;
 	
 	tail = (size_t*)sBuf;
 	*tail = 0;
-	//memcpy((void*)tail, &t1, sizeof(int));
 
 	head = tail + 1;
 	*head = 0;
-	//memcpy((void*)head, &h1, sizeof(int));
 
 	clients = head + 1;
-	//memcpy((void*)clients, &c1, sizeof(int));
 
 
 
@@ -155,7 +138,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 					catch (...)
 					{
 						/*do nothing here, because if we can't access the
-						clients it means that a cunsomer is currently writing to it
+						clients it means that a consumer is currently writing to it
 						which means we still have to re-loop this procedure*/
 					}
 				}
@@ -182,9 +165,6 @@ CircularBuffer::~CircularBuffer()
 
 bool CircularBuffer::canRead() 
 {
-	/*connect this function to the shared head and
-	compare it to the last tail, or if it just returns
-	the current position of the head??*/
 	if (idOrOffset != *head)
 	{
 		if (idOrOffset > *head)
@@ -204,7 +184,6 @@ bool CircularBuffer::canRead()
 		{
 			try
 			{
-				//memcpy(mHeader, (Header*)cBuf + idOrOffset, sizeof(Header));
 				mHeader = (Header*)cBuf + idOrOffset;
 				break;
 			}
@@ -223,14 +202,6 @@ bool CircularBuffer::canRead()
 
 size_t CircularBuffer::canWrite()
 {
-	/*Write a supercool function here that compares the
-	values of the head and last tail of the shared buffer,
-	then returns how many bytes that are free*/
-	/*getting the position of the head and the last tail*/
-	//size_t tailPos = 0, headPos = 0;
-	//memcpy(&tailPos, (void*)tail, sizeof(int));
-	//memcpy(&headPos, (void*)head, sizeof(int));
-
 	if (*tail != *head)
 	{
 		if (*tail > *head)
@@ -242,7 +213,7 @@ size_t CircularBuffer::canWrite()
 			return (buffSize - (*head - *tail));
 		}
 	}
-	else /*<--------------------------------------------------------------look at this one later*/
+	else 
 	{
 		Header* mHeader = nullptr;
 
@@ -254,7 +225,6 @@ size_t CircularBuffer::canWrite()
 		{
 			try
 			{
-				//memcpy(mHeader, (Header*)cBuf + *head, sizeof(Header));
 				mHeader = (Header*)cBuf + *head;
 				break;
 			}
@@ -294,10 +264,10 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)(cBuf + *head + sizeof(Header)), msg, fitLength);
 
 				/*writing the rest of the message*/
-				memcpy((void*)cBuf, (char*)msg + fitLength, length - fitLength); //check this one <------------------------------
+				memcpy((void*)cBuf, (char*)msg + fitLength, length - fitLength);
 
 				/*updating the head position*/
-				*head = ((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize); //check this one as well<--------------------
+				*head = ((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
 			}
 			else /*If nothing fits in the end of the buffer*/
 			{

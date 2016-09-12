@@ -34,24 +34,15 @@ void gen_random(char *s, const int len) {
 
 void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
 {
-	//just testing the constructor
 	CircularBuffer cBuffer(buffName, buffSize, true, 256);
 	srand(time(NULL));
 	/*the current message variable will tell the producer how many
 	messages are left to send */
-
-	//int diff = 320 % 256;
-	//int paddingx = 256 - diff;
 	size_t msgLeft = numMessages;
-	//char* msg1 = new char[756];
-	//size_t l1 = 756;
-	//gen_random(msg1, l1);
-
 	
 	while (msgLeft > 0)
 	{
-		/*skapa meddelandet sen skicka (OBS skicka även längden på meddelandet), går det inte, lägg en sleep och testa igen*/
-		//a bool variable to check if the message was sent
+		/*a bool variable to check if the message was sent */
 		bool msgSent = false;
 
 		/*calculating the size of the message*/
@@ -71,7 +62,6 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.push(message, msgSize))
 			{
-				//printf("%d %s\n", msgLeft, message);
 				std::cout << msgLeft << " " << message << "\n";
 				msgSent = true;
 				msgLeft--;
@@ -105,8 +95,6 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.pop(msg, length))
 			{
-				//printf("Consumer\nid: %d\nMessage: %s\n", cBuffer.getId(), msg); temporary
-				//printf("%d %s", msgLeft, msg);
 				std::cout << msgLeft << " " << msg << "\n";
 				msgRecieved = true;
 				msgLeft--;
@@ -114,7 +102,7 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			}
 			else
 			{
-				Sleep(delay); //is this where i'm supposed to use the delay?
+				Sleep(delay); 
 			}
 		}
 	}
@@ -125,9 +113,6 @@ int main(int argc, char* args[])
 {
 	if (argc >= 6)
 	{
-		//the first element is the executable command to
-		//get to this point, so for this program the first element is garbage.
-
 		/*
 		The first usable element (1) will determine if the program
 		will behave as a producer or a comsumer.
@@ -160,6 +145,5 @@ int main(int argc, char* args[])
 		else if (strcmp(args[1], "Consumer") == 0)
 			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
 	}
-	//getchar();
 	return 0;
 }

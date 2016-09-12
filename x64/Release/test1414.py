@@ -67,7 +67,7 @@ class ThreadTest(threading.Thread):
 
     def run(self):
         p = subprocess.Popen( self.cmd.split(),
-                         shell = False,
+                         shell = True,
                          stdout = subprocess.PIPE,
                          stderr = subprocess.PIPE )
         self.stdout, self.stderr = p.communicate()
