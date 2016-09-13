@@ -202,57 +202,71 @@ bool CircularBuffer::canRead()
 
 size_t CircularBuffer::canWrite()
 {
-	if (*tail != *head)
-	{
+	//if (*tail != *head)
+	//{
 		if (*tail > *head)
 		{
-			return (buffSize - *tail + *head);
+			//return (buffSize - *tail + *head);
+			return (*tail - *head);
 		}
-		else if (*tail < *head)
+		else if (*tail <= *head)
 		{
-			return (buffSize - (*head - *tail));
+			//return (buffSize - (*head - *tail));
+			return ((buffSize - *head) + *tail);
 		}
-	}
-	else 
-	{
-		Header* mHeader = nullptr;
+	//}
+	//else 
+	//{
+	//	Header* mHeader = nullptr;
 
-		/*inserting a loop here just for precausion.
-		Because if the memory cannot be read it means
-		that a consumer has locked it and is currently
-		changing it's contents*/
-		while (true)
-		{
-			try
-			{
-				mHeader = (Header*)(cBuf + *head);
-				break;
-			}
-			catch (...)
-			{
-				Sleep(5);
-			}
-		}
+	//	/*inserting a loop here just for precausion.
+	//	Because if the memory cannot be read it means
+	//	that a consumer has locked it and is currently
+	//	changing it's contents*/
+	//	while (true)
+	//	{
+	//		try
+	//		{
+	//			mHeader = (Header*)(cBuf + *head);
+	//			break;
+	//		}
+	//		catch (...)
+	//		{
+	//			Sleep(5);
+	//		}
+	//	}
 
-		/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-		if (mHeader->nrClientsLeft == 0)
-		{
-			return buffSize;
-		}
-		else
-			return 0;
-	}
+	//	/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
+	//	if (mHeader->nrClientsLeft == 0)
+	//	{
+	//		return buffSize;
+	//	}
+	//	else
+	//		return 0;
+	//}
 	return 0;
 }
 
 bool CircularBuffer::push(const void * msg, size_t length)
 {
-	if (canWrite() > length)
+	//if (canWrite() > length)
+	//{
+	//if (*tail > *head)
+	//{
+	//	//return (buffSize - *tail + *head);
+	//	return (*tail - *head);
+	//}
+	//else if (*tail <= *head)
+	//{
+	//	//return (buffSize - (*head - *tail));
+	//	return ((buffSize - *head) + *tail);
+	//}
+	if ((*tail - *head) > length || ((buffSize - *head) + *tail) > length)
 	{
 		Header mHeader{ this->idOrOffset++, length, *clients };
-		if ((*head + length + sizeof(Header)) > buffSize)
+		if ((*head + length + sizeof(Header)) > buffSize) /*The message is bigger than the buffersize*/
 		{
-			if ((*head + sizeof(Header)) <= buffSize)
+			if ((*head + sizeof(Header)) <= buffSize) /*at least the header will fit at the end of the buffer*/
 			{
 				/*writing the header*/
 				memcpy((void*)(cBuf + *head), &mHeader, sizeof(Header));
@@ -301,29 +315,11 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 {
 	if (canRead())
 	{
-		bool isLast = false;
+		Header *mHeader = nullptr;
 		if (this->idOrOffset + sizeof(Header) > buffSize) /*if the header didn't fit at the end of the buffer*/
 		{
-			Header *mHeader = (Header*)cBuf;
+			mHeader = (Header*)cBuf;
 			length = mHeader->length;
-
-			/*changing contents, so using a mutex*/
-			while (true)
-			{
-				try
-				{
-					WaitForSingleObject(mutex, INFINITE);
-					mHeader->nrClientsLeft--;
-					if (mHeader->nrClientsLeft == 0)
-						isLast = true;
-					ReleaseMutex(mutex);
-					break;
-				}
-				catch (...)
-				{
-					Sleep(5);
-				}
-			}
 
 			/*getting the message*/
 			memcpy(msg, (void*)(cBuf + sizeof(Header)), mHeader->length);
@@ -334,26 +330,8 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 		else /*if there's at least a header at the chosen memory location*/
 		{
 			/*getting the header*/
-			Header *mHeader = (Header*)(cBuf + idOrOffset);
+			mHeader = (Header*)(cBuf + idOrOffset);
 			length = mHeader->length;
-
-			/*changing contents, so using a mutex*/
-			while (true)
-			{
-				try
-				{
-					WaitForSingleObject(mutex, INFINITE);
-					mHeader->nrClientsLeft--;
-					if (mHeader->nrClientsLeft == 0)
-						isLast = true;
-					ReleaseMutex(mutex);
-					break;
-				}
-				catch (...)
-				{
-					Sleep(5);
-				}
-			}
 
 			if (this->idOrOffset + mHeader->length > buffSize)  /*Part of the message is at the end of the buffer*/
 			{
@@ -378,22 +356,23 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length) % buffSize + padCalc(mHeader->length + sizeof(Header), chunkSize);
 			}
 		}
-		if (isLast)
+		/*changing contents, applying mutex*/
+		while (true)
 		{
-			/*changing contents, so using a mutex*/
-			while (true)
+			try
 			{
-				try
+				WaitForSingleObject(mutex, INFINITE);
+				mHeader->nrClientsLeft--;
+				if (mHeader->nrClientsLeft == 0)
 				{
-					WaitForSingleObject(mutex, INFINITE);
 					*tail = this->idOrOffset;
-					ReleaseMutex(mutex);
-					break;
 				}
-				catch (...)
-				{
-					Sleep(5);
-				}
+				ReleaseMutex(mutex);
+				break;
+			}
+			catch (...)
+			{
+				Sleep(5);
 			}
 		}
 		return true;
