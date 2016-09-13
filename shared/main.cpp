@@ -35,9 +35,10 @@ void gen_random(char *s, const int len) {
 void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
 {
 	CircularBuffer cBuffer(buffName, buffSize, true, 256);
-	srand(time(NULL));
+	//srand(time(NULL));
 	/*the current message variable will tell the producer how many
 	messages are left to send */
+	char* message = new char[buffSize * 1<<10];
 	size_t msgLeft = numMessages;
 	
 	while (msgLeft > 0)
@@ -53,7 +54,6 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			msgSize = chunkMsg;
 
 		/*Creating the message*/
-		char* message = new char[msgSize];
 
 		gen_random(message, msgSize);
 		
@@ -74,20 +74,20 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		}
 
 		/*deleting the message so that there will be no memory leaks*/
-		delete message;
 	}
+	delete message;
 }
 
 void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages)
 {
 	CircularBuffer cBuffer(buffName, buffSize, false, 256);
 	size_t msgLeft = numMessages;
-	char* msg = new char[buffSize];
+	char* msg = new char[buffSize * 1 << 10];
 
 	while (msgLeft > 0)
 	{
 		//Creating the variable that will hold the message
-		char* msg = NULL; 
+		//char* msg = NULL; 
 		size_t length;
 
 		bool msgRecieved = false;
@@ -95,6 +95,7 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.pop(msg, length))
 			{
+				msg[length] = '\0';
 				std::cout << msgLeft << " " << msg << "\n";
 				msgRecieved = true;
 				msgLeft--;
@@ -140,9 +141,9 @@ int main(int argc, char* args[])
 		else
 			chunkSize = atoi(args[5]);
 
-		if (strcmp(args[1], "Producer") == 0)
+		if (strcmp(args[1], "producer") == 0)
 			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
-		else if (strcmp(args[1], "Consumer") == 0)
+		else if (strcmp(args[1], "consumer") == 0)
 			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
 	}
 	return 0;

@@ -37,7 +37,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		FILE_MAP_ALL_ACCESS,
 		0,
 		0,
-		buffSize);
+		(buffSize * 1 << 10));
 
 	if (cBuf == NULL)
 	{
@@ -69,7 +69,7 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 		FILE_MAP_ALL_ACCESS,
 		0,
 		0,
-		buffSize);
+		12);
 
 	if (sBuf == NULL)
 	{
@@ -184,7 +184,7 @@ bool CircularBuffer::canRead()
 		{
 			try
 			{
-				mHeader = (Header*)cBuf + idOrOffset;
+				mHeader = (Header*)(cBuf + idOrOffset);
 				break;
 			}
 			catch (...)
@@ -225,7 +225,7 @@ size_t CircularBuffer::canWrite()
 		{
 			try
 			{
-				mHeader = (Header*)cBuf + *head;
+				mHeader = (Header*)(cBuf + *head);
 				break;
 			}
 			catch (...)
