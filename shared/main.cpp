@@ -74,7 +74,7 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		}
 	}
 
-	//Sleep(5000);
+	//Sleep(10000);
 	/*deleting the message so that there will be no memory leaks*/
 	delete message;
 }
@@ -97,7 +97,7 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			if (cBuffer.pop(msg, length))
 			{
 				msg[length] = '\0';
-				std::cout << "MESSAGE NR: " << msgLeft << "\n " << msg << "\n";
+				std::cout << msgLeft << " " << msg << "\n";
 				msgRecieved = true;
 				msgLeft--;
 				Sleep(delay);
@@ -108,6 +108,7 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			}
 		}
 	}
+	//Sleep(10000);
 	delete msg;
 }
 

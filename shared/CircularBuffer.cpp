@@ -202,48 +202,48 @@ bool CircularBuffer::canRead()
 
 size_t CircularBuffer::canWrite()
 {
-	//if (*tail != *head)
-	//{
+	if (*tail != *head)
+	{
 		if (*tail > *head)
 		{
 			//return (buffSize - *tail + *head);
 			return (*tail - *head);
 		}
-		else if (*tail <= *head)
+		else if (*tail < *head)
 		{
 			//return (buffSize - (*head - *tail));
 			return ((buffSize - *head) + *tail);
 		}
-	//}
-	//else 
-	//{
-	//	Header* mHeader = nullptr;
+	}
+	else 
+	{
+		Header* mHeader = nullptr;
 
-	//	/*inserting a loop here just for precausion.
-	//	Because if the memory cannot be read it means
-	//	that a consumer has locked it and is currently
-	//	changing it's contents*/
-	//	while (true)
-	//	{
-	//		try
-	//		{
-	//			mHeader = (Header*)(cBuf + *head);
-	//			break;
-	//		}
-	//		catch (...)
-	//		{
-	//			Sleep(5);
-	//		}
-	//	}
+		/*inserting a loop here just for precausion.
+		Because if the memory cannot be read it means
+		that a consumer has locked it and is currently
+		changing it's contents*/
+		while (true)
+		{
+			try
+			{
+				mHeader = (Header*)(cBuf + *head);
+				break;
+			}
+			catch (...)
+			{
+				Sleep(5);
+			}
+		}
 
-	//	/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-	//	if (mHeader->nrClientsLeft == 0)
-	//	{
-	//		return buffSize;
-	//	}
-	//	else
-	//		return 0;
-	//}
+		/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
+		if (mHeader->nrClientsLeft == 0)
+		{
+			return buffSize;
+		}
+		else
+			return 0;
+	}
 	return 0;
 }
 
@@ -261,7 +261,9 @@ bool CircularBuffer::push(const void * msg, size_t length)
 	//	//return (buffSize - (*head - *tail));
 	//	return ((buffSize - *head) + *tail);
 	//}
-	if ((*tail - *head) > length || ((buffSize - *head) + *tail) > length)
+	//if ((*tail - *head) > length || ((buffSize - *head) + *tail) > length)
+	//{
+	if (canWrite() > length)
 	{
 		Header mHeader{ this->idOrOffset++, length, *clients };
 		if ((*head + length + sizeof(Header)) > buffSize) /*The message is bigger than the buffersize*/
@@ -282,6 +284,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 
 				/*updating the head position*/
 				*head = ((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
+				if (*head == buffSize) { *head = 0; }
 			}
 			else /*If nothing fits in the end of the buffer*/
 			{
@@ -293,6 +296,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 
 				/*updating the head position*/
 				*head = ((length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
+				if (*head == buffSize) { *head = 0; }
 			}
 		}
 		else /*if the message length isn't longer than the memory end*/
@@ -305,6 +309,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 
 			/*updating the head position*/
 			*head = ((*head + length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
+			if (*head == buffSize) { *head = 0; }
 		}
 		return true;
 	}
@@ -326,6 +331,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 
 			/*updating the internal tail*/
 			this->idOrOffset = (size_t)((sizeof(Header) + mHeader->length) % buffSize) + padCalc(mHeader->length + sizeof(Header), chunkSize);
+			if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
 		}
 		else /*if there's at least a header at the chosen memory location*/
 		{
@@ -333,7 +339,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			mHeader = (Header*)(cBuf + idOrOffset);
 			length = mHeader->length;
 
-			if (this->idOrOffset + mHeader->length > buffSize)  /*Part of the message is at the end of the buffer*/
+			if (this->idOrOffset + sizeof(Header) + mHeader->length > buffSize)  /*Part of the message is at the end of the buffer*/
 			{
 				/*calculating how many characters are at the rest of the memory*/
 				size_t fitLength = buffSize - (mHeader->length + sizeof(Header)) - sizeof(Header);
@@ -346,6 +352,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 
 				/*updating the internal tail*/
 				this->idOrOffset = (size_t)((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
+				if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
 			}
 			else
 			{
@@ -353,7 +360,8 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				memcpy(msg, (void*)(cBuf + sizeof(Header) + idOrOffset), mHeader->length);
 
 				/*updating the internal tail*/
-				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length) % buffSize + padCalc(mHeader->length + sizeof(Header), chunkSize);
+				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length) % buffSize + padCalc(mHeader->length + sizeof(Header), chunkSize); //kanbske denna
+				if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
 			}
 		}
 		/*changing contents, applying mutex*/
@@ -372,7 +380,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			}
 			catch (...)
 			{
-				Sleep(5);
+				Sleep(1);
 			}
 		}
 		return true;
@@ -380,14 +388,3 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 	return false;
 }
 
-void CircularBuffer::closeEverything()
-{
-	//unmapping the views
-	UnmapViewOfFile(cBuf);
-	UnmapViewOfFile(sBuf);
-
-	//Closing the handles
-	CloseHandle(hMapFile);
-	CloseHandle(sMapFile);
-	CloseHandle(mutex);
-}

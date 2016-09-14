@@ -54,7 +54,7 @@ tests = [
         'numMsg': 100,
         'memSize': 10,
         'msgSize': 'random',
-    }
+    } 
 ]
 import msvcrt
 # one thread per command

@@ -16,13 +16,11 @@ private:
 	size_t chunkSize; //the multiple
 	size_t buffSize;
 	size_t idOrOffset; 
-	//size_t numPosition;
 
 	//the variables that hold the addresses for the shared values
 	size_t* tail;
 	size_t* head;
 	size_t* clients;
-	//char* currentPosition;
 
 	//the variables that hold the viewmapfile
 	char* cBuf, *sBuf;
@@ -42,7 +40,7 @@ private:
 	};
 	CircularBuffer();
 	bool canRead();  
-	size_t canWrite(); //<--------------------------------------------------make bool later
+	size_t canWrite();
 public:
 	//constructor
 	CircularBuffer(
@@ -59,9 +57,6 @@ public:
 	// in the memory. The memory is expected to be allocated by the program that calls
 	// this function.
 	bool pop(char* msg, size_t& length);
-
-	//just for testing
-	void closeEverything();
 };
 
 /*
