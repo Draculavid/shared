@@ -1,12 +1,2 @@
-﻿  main.cpp
-  Generating Code...
-  Compiling...
-  CircularBuffer.cpp
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(383): error C2039: 'closeEverything': is not a member of 'CircularBuffer'
-  d:\jesper\my documents\github\shared\shared\circularbuffer.h(10): note: see declaration of 'CircularBuffer'
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(386): error C2065: 'cBuf': undeclared identifier
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(387): error C2065: 'sBuf': undeclared identifier
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(390): error C2065: 'hMapFile': undeclared identifier
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(391): error C2065: 'sMapFile': undeclared identifier
-d:\jesper\my documents\github\shared\shared\circularbuffer.cpp(392): error C2065: 'mutex': undeclared identifier
-  Generating Code...
+﻿  CircularBuffer.cpp
+  shared.vcxproj -> \\storage10.student.bth.se\students\20142\dawi14\Visual Studio 2015\Projects\shared\Debug\shared.exe

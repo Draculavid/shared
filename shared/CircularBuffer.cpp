@@ -192,7 +192,7 @@ bool CircularBuffer::canRead()
 				Sleep(5);
 			}
 		}
-		if (mHeader->nrClientsLeft > 0)
+		if (mHeader->nrClientsLeft > 0 && mHeader->nrClientsLeft <= *clients)
 		{
 			return true;
 		}
@@ -237,7 +237,7 @@ size_t CircularBuffer::canWrite()
 		}
 
 		/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-		if (mHeader->nrClientsLeft == 0)
+		if (mHeader->nrClientsLeft == 0 || mHeader->nrClientsLeft > *clients)
 		{
 			return buffSize;
 		}
@@ -274,7 +274,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)(cBuf + *head), &mHeader, sizeof(Header));
 
 				/*calculating how many characters will fit into the rest of the memory*/
-				size_t fitLength = buffSize - (length + sizeof(Header)) - sizeof(Header);
+				size_t fitLength = buffSize - (*head + sizeof(Header));
 
 				/*writing the first part of the message*/
 				memcpy((void*)(cBuf + *head + sizeof(Header)), msg, fitLength);
@@ -342,7 +342,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			if (this->idOrOffset + sizeof(Header) + mHeader->length > buffSize)  /*Part of the message is at the end of the buffer*/
 			{
 				/*calculating how many characters are at the rest of the memory*/
-				size_t fitLength = buffSize - (mHeader->length + sizeof(Header)) - sizeof(Header);
+				size_t fitLength = buffSize - (idOrOffset + sizeof(Header));
 
 				/*getting the first part of the emssage*/
 				memcpy(msg, (void*)(cBuf + idOrOffset + sizeof(Header)), fitLength);
