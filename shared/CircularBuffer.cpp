@@ -167,18 +167,20 @@ bool CircularBuffer::canRead()
 {
 	if (idOrOffset != *head)
 	{
-		if (idOrOffset > *head)
+		return true;
+		/*if (idOrOffset > *head)
 		{
 			return true;
 		}
-		else
+		else if (idOrOffset < *head)
 		{
 			return true;
-		}
+		}*/
 	}
 	else
 	{
-		Header *mHeader = nullptr;
+		return false;
+		/*Header *mHeader = nullptr;
 
 		while (true)
 		{
@@ -192,10 +194,11 @@ bool CircularBuffer::canRead()
 				Sleep(5);
 			}
 		}
-		if (mHeader->nrClientsLeft > 0 && mHeader->nrClientsLeft <= *clients)
+		if (mHeader->nrClientsLeft > 0)
 		{
-			return true;
-		}
+			if (mHeader->nrClientsLeft <= *clients)
+				return true;
+		}*/
 	}
 	return false;
 }
@@ -217,32 +220,36 @@ size_t CircularBuffer::canWrite()
 	}
 	else 
 	{
-		Header* mHeader = nullptr;
+		return buffSize;
+		//Header* mHeader = nullptr;
 
-		/*inserting a loop here just for precausion.
-		Because if the memory cannot be read it means
-		that a consumer has locked it and is currently
-		changing it's contents*/
-		while (true)
-		{
-			try
-			{
-				mHeader = (Header*)(cBuf + *head);
-				break;
-			}
-			catch (...)
-			{
-				Sleep(5);
-			}
-		}
+		///*inserting a loop here just for precausion.
+		//Because if the memory cannot be read it means
+		//that a consumer has locked it and is currently
+		//changing it's contents*/
+		//while (true)
+		//{
+		//	try
+		//	{
+		//		mHeader = (Header*)(cBuf + *head);
+		//		break;
+		//	}
+		//	catch (...)
+		//	{
+		//		Sleep(5);
+		//	}
+		//}
 
-		/*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-		if (mHeader->nrClientsLeft == 0 || mHeader->nrClientsLeft > *clients)
-		{
-			return buffSize;
-		}
-		else
-			return 0;
+		///*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
+		//if (mHeader->nrClientsLeft == 0)
+		//{
+		//	if (*tail < *head)
+		//		return ((buffSize - *head) + *tail);
+		//	else if (*tail > *head)
+		//		return (*tail - *head);
+		//	else if (*tail == *head)
+		//		return buffSize;
+		//}
 	}
 	return 0;
 }
@@ -263,7 +270,10 @@ bool CircularBuffer::push(const void * msg, size_t length)
 	//}
 	//if ((*tail - *head) > length || ((buffSize - *head) + *tail) > length)
 	//{
-	if (canWrite() > length)
+	//size_t avaliableMem = canWrite();
+	//if (canWrite() > length)
+	//{
+	if (canWrite() > (length + sizeof(Header) + padCalc(sizeof(Header) + length, chunkSize)))
 	{
 		Header mHeader{ this->idOrOffset++, length, *clients };
 		if ((*head + length + sizeof(Header)) > buffSize) /*The message is bigger than the buffersize*/
@@ -283,8 +293,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)cBuf, (char*)msg + fitLength, length - fitLength);
 
 				/*updating the head position*/
-				*head = ((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
-				if (*head == buffSize) { *head = 0; }
+				*head = ((length - fitLength + padCalc(length - fitLength, chunkSize)) % buffSize);
 			}
 			else /*If nothing fits in the end of the buffer*/
 			{
@@ -295,8 +304,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 				memcpy((void*)(cBuf + sizeof(Header)), msg, length);
 
 				/*updating the head position*/
-				*head = ((length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
-				if (*head == buffSize) { *head = 0; }
+				*head = ((length + sizeof(Header) + padCalc(length + sizeof(Header), chunkSize)) % buffSize);
 			}
 		}
 		else /*if the message length isn't longer than the memory end*/
@@ -308,8 +316,7 @@ bool CircularBuffer::push(const void * msg, size_t length)
 			memcpy((void*)(cBuf + *head + sizeof(Header)), msg, length);
 
 			/*updating the head position*/
-			*head = ((*head + length + sizeof(Header)) % buffSize) + padCalc(length + sizeof(Header), chunkSize);
-			if (*head == buffSize) { *head = 0; }
+			*head = ((*head + length + sizeof(Header) + padCalc(length + sizeof(Header), chunkSize)) % buffSize);
 		}
 		return true;
 	}
@@ -330,8 +337,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			memcpy(msg, (void*)(cBuf + sizeof(Header)), mHeader->length);
 
 			/*updating the internal tail*/
-			this->idOrOffset = (size_t)((sizeof(Header) + mHeader->length) % buffSize) + padCalc(mHeader->length + sizeof(Header), chunkSize);
-			if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
+			this->idOrOffset = (size_t)((sizeof(Header) + mHeader->length + padCalc(mHeader->length + sizeof(Header), chunkSize)) % buffSize);
 		}
 		else /*if there's at least a header at the chosen memory location*/
 		{
@@ -351,8 +357,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				memcpy((msg + fitLength), (void*)cBuf, mHeader->length - fitLength);
 
 				/*updating the internal tail*/
-				this->idOrOffset = (size_t)((length - fitLength) % buffSize) + padCalc(length - fitLength, chunkSize);
-				if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
+				this->idOrOffset = (size_t)((length - fitLength + padCalc(length - fitLength, chunkSize)) % buffSize);
 			}
 			else
 			{
@@ -360,8 +365,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				memcpy(msg, (void*)(cBuf + sizeof(Header) + idOrOffset), mHeader->length);
 
 				/*updating the internal tail*/
-				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length) % buffSize + padCalc(mHeader->length + sizeof(Header), chunkSize); //kanbske denna
-				if (this->idOrOffset == buffSize) { this->idOrOffset = 0; }
+				this->idOrOffset = (size_t)(this->idOrOffset + sizeof(Header) + mHeader->length + padCalc(mHeader->length + sizeof(Header), chunkSize)) % buffSize;
 			}
 		}
 		/*changing contents, applying mutex*/
@@ -370,11 +374,14 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 			try
 			{
 				WaitForSingleObject(mutex, INFINITE);
-				mHeader->nrClientsLeft--;
-				if (mHeader->nrClientsLeft == 0)
+				size_t tempClient = mHeader->nrClientsLeft;
+				tempClient--;
+				//mHeader->nrClientsLeft--;
+				if (tempClient == 0)
 				{
 					*tail = this->idOrOffset;
 				}
+				mHeader->nrClientsLeft = tempClient;
 				ReleaseMutex(mutex);
 				break;
 			}

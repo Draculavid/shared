@@ -49,7 +49,7 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		/*calculating the size of the message*/
 		size_t msgSize;
 		if (chunkMsg == 0)
-			msgSize = random(1, (buffSize * 1 << 10) / 4);
+			msgSize = random(1, ((buffSize * (1 << 10)) / 4));
 		else
 			msgSize = chunkMsg;
 
