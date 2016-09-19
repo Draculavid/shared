@@ -167,38 +167,13 @@ bool CircularBuffer::canRead()
 {
 	if (idOrOffset != *head)
 	{
+		/*if the head and tail are at different locations, we can always read*/
 		return true;
-		/*if (idOrOffset > *head)
-		{
-			return true;
-		}
-		else if (idOrOffset < *head)
-		{
-			return true;
-		}*/
 	}
 	else
 	{
+		/*If the head and the tail are at the same location we can never read*/
 		return false;
-		/*Header *mHeader = nullptr;
-
-		while (true)
-		{
-			try
-			{
-				mHeader = (Header*)(cBuf + idOrOffset);
-				break;
-			}
-			catch (...)
-			{
-				Sleep(5);
-			}
-		}
-		if (mHeader->nrClientsLeft > 0)
-		{
-			if (mHeader->nrClientsLeft <= *clients)
-				return true;
-		}*/
 	}
 	return false;
 }
@@ -209,70 +184,25 @@ size_t CircularBuffer::canWrite()
 	{
 		if (*tail > *head)
 		{
-			//return (buffSize - *tail + *head);
 			return (*tail - *head);
 		}
 		else if (*tail < *head)
 		{
-			//return (buffSize - (*head - *tail));
 			return ((buffSize - *head) + *tail);
 		}
 	}
 	else 
 	{
+		/* If the head and the last tail are at the same position, it means that 
+		 the whole buffer is free*/
 		return buffSize;
-		//Header* mHeader = nullptr;
-
-		///*inserting a loop here just for precausion.
-		//Because if the memory cannot be read it means
-		//that a consumer has locked it and is currently
-		//changing it's contents*/
-		//while (true)
-		//{
-		//	try
-		//	{
-		//		mHeader = (Header*)(cBuf + *head);
-		//		break;
-		//	}
-		//	catch (...)
-		//	{
-		//		Sleep(5);
-		//	}
-		//}
-
-		///*if nrClientsLeft are 0, it means that all of the consumers have read the messages*/
-		//if (mHeader->nrClientsLeft == 0)
-		//{
-		//	if (*tail < *head)
-		//		return ((buffSize - *head) + *tail);
-		//	else if (*tail > *head)
-		//		return (*tail - *head);
-		//	else if (*tail == *head)
-		//		return buffSize;
-		//}
 	}
 	return 0;
 }
 
 bool CircularBuffer::push(const void * msg, size_t length)
 {
-	//if (canWrite() > length)
-	//{
-	//if (*tail > *head)
-	//{
-	//	//return (buffSize - *tail + *head);
-	//	return (*tail - *head);
-	//}
-	//else if (*tail <= *head)
-	//{
-	//	//return (buffSize - (*head - *tail));
-	//	return ((buffSize - *head) + *tail);
-	//}
-	//if ((*tail - *head) > length || ((buffSize - *head) + *tail) > length)
-	//{
-	//size_t avaliableMem = canWrite();
-	//if (canWrite() > length)
-	//{
+	/*If the amount of free memory is greater than the total length of the message*/
 	if (canWrite() > (length + sizeof(Header) + padCalc(sizeof(Header) + length, chunkSize)))
 	{
 		Header mHeader{ this->idOrOffset++, length, *clients };
@@ -376,7 +306,6 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				WaitForSingleObject(mutex, INFINITE);
 				size_t tempClient = mHeader->nrClientsLeft;
 				tempClient--;
-				//mHeader->nrClientsLeft--;
 				if (tempClient == 0)
 				{
 					*tail = this->idOrOffset;

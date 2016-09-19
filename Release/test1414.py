@@ -78,7 +78,7 @@ program = 'shared.exe'
 
 if __name__=='__main__':
     programName = program
-    testName = 'all'
+    testName = 'randomMsg'
     for arg in sys.argv[1:]:
         # specify ONE test only
         if 'test' in arg:

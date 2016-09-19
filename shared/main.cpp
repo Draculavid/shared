@@ -35,8 +35,8 @@ void gen_random(char *s, const int len) {
 void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
 {
 	CircularBuffer cBuffer(buffName, buffSize, true, 256);
-	//srand(time(NULL));
-	/*the current message variable will tell the producer how many
+
+	/*the msgLeft variable will tell the producer how many
 	messages are left to send */
 	char* message = new char[buffSize * 1<<10];
 	size_t msgLeft = numMessages;
@@ -74,7 +74,6 @@ void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		}
 	}
 
-	//Sleep(10000);
 	/*deleting the message so that there will be no memory leaks*/
 	delete message;
 }
@@ -83,12 +82,12 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 {
 	CircularBuffer cBuffer(buffName, buffSize, false, 256);
 	size_t msgLeft = numMessages;
+
+	//Creating the variable that will hold the message
 	char* msg = new char[buffSize * 1 << 10];
 
 	while (msgLeft > 0)
 	{
-		//Creating the variable that will hold the message
-		//char* msg = NULL; 
 		size_t length;
 
 		bool msgRecieved = false;
@@ -108,7 +107,6 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 			}
 		}
 	}
-	//Sleep(10000);
 	delete msg;
 }
 

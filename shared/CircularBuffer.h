@@ -9,13 +9,13 @@
 class CircularBuffer
 {
 private:
-	//The handles for the filemaps
+	//The handles for the filemaps and mutex
 	HANDLE hMapFile, sMapFile, mutex;
 
 	//variables
 	size_t chunkSize; //the multiple
 	size_t buffSize;
-	size_t idOrOffset; 
+	size_t idOrOffset; /*Used as id for producer, offset for consumer*/
 
 	//the variables that hold the addresses for the shared values
 	size_t* tail;
@@ -33,7 +33,7 @@ private:
 		size_t length;
 		size_t nrClientsLeft;
 
-		/*Just using two variables as the third (offset) will be
+		/*Just using three variables as the fourth (offset) will be
 		  redundant, considering that the length will be a multiple
 		  of 256
 		  */
@@ -53,48 +53,5 @@ public:
 	~CircularBuffer();
 
 	bool push(const void* msg, size_t length);
-	// try to read a message from the buffer, and the implementation puts the content
-	// in the memory. The memory is expected to be allocated by the program that calls
-	// this function.
 	bool pop(char* msg, size_t& length);
 };
-
-/*
-
-class CircBufferFixed
-{
-private:
-// your private stuff,
-// implementation details, etc.
-//
-struct Header
-{
-size_t id;
-size_t length;
-size_t padding;
-// maybe number of consumers here?
-};
-
-public:
-// Constructor
-CircBufferFixed(
-LPCWSTR buffName,          // unique name
-const size_t& buffSize,    // size of the whole filemap
-const bool& isProducer,    // is this buffer going to be used as producer
-const size_t& chunkSize);  // round up messages to multiple of this.
-
-// Destructor
-~CircBufferFixed();
-
-size_t canRead();  // returns how many bytes are available for reading.
-size_t canWrite(); // returns how many bytes are free in the buffer.
-// try to send a message through the buffer,
-// if returns true then it succeeded, otherwise the message has not been sent.
-// it should return false if the buffer does not have enough space.
-bool push(const void* msg, size_t length);
-// try to read a message from the buffer, and the implementation puts the content
-// in the memory. The memory is expected to be allocated by the program that calls
-// this function.
-bool pop(char* msg, size_t& length);
-};
-*/
