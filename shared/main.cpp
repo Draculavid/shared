@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#pragma region the random functions
+#pragma region the random function
 size_t random(size_t min, size_t max)
 {
 	int range, result, cutoff;
@@ -19,120 +19,75 @@ size_t random(size_t min, size_t max)
 
 	return result % range + min;
 }
-
-size_t randomString(char *s, const size_t maxSize) {
-
-	//size_t rLen = random(1, maxSize); <------------------------------ dont forget this
+void gen_random(char *s, const int len) {
 	static const char alphanum[] =
 		"0123456789"
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"abcdefghijklmnopqrstuvwxyz";
 
-	for (size_t i = 0; i < maxSize; ++i) {
-		s[i] = alphanum[random(1, sizeof(alphanum))];
+	for (auto i = 0; i < len; ++i) {
+		s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
 	}
-
-	s[maxSize] = '\0';
-
-	return maxSize;
+	s[len] = 0;
 }
 #pragma endregion
 
 void Producer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages, const size_t & chunkMsg)
 {
-	//just testing the constructor
 	CircularBuffer cBuffer(buffName, buffSize, true, 256);
-	srand(time(NULL));
-	/*the current message variable will tell the producer how many
+
+	/*the msgLeft variable will tell the producer how many
 	messages are left to send */
-
-	//int diff = 320 % 256;
-	//int paddingx = 256 - diff;
+	char* message = new char[buffSize * 1<<10];
 	size_t msgLeft = numMessages;
-	char* msg1 = new char[756];
-	size_t l1 = randomString(msg1, 756);
-
 	
 	while (msgLeft > 0)
 	{
-		/*skapa meddelandet sen skicka (OBS skicka även längden på meddelandet), går det inte, lägg en sleep och testa igen*/
-		//a bool variable to check if the message was sent
+		/*a bool variable to check if the message was sent */
 		bool msgSent = false;
 
 		/*calculating the size of the message*/
-		//size_t msgSize;
-		//if (chunkMsg == 0)
-		//	msgSize = random(1, random(1, (buffSize * 1<<10) / 4));
-		//else
-		//	msgSize = random(1, chunkMsg);
+		size_t msgSize;
+		if (chunkMsg == 0)
+			msgSize = random(1, ((buffSize * (1 << 10)) / 4));
+		else
+			msgSize = chunkMsg;
 
-		///*Creating the message*/
-		//char* message = new char[msgSize];
-		//size_t mLength = randomString(message, msgSize);
+		/*Creating the message*/
 
-
-		//just for testing
-
-		//char* msg2 = new char[500];
-		//size_t l2 = randomString(msg2, 512);
+		gen_random(message, msgSize);
 		
 		/*A loop that tries to sent the message over and over until it's sent*/
 		while (!msgSent)
 		{
-			if (cBuffer.push(msg1, l1))
+			if (cBuffer.push(message, msgSize))
 			{
+				std::cout << msgLeft << " " << message << "\n";
 				msgSent = true;
+				msgLeft--;
+				Sleep(delay);
 			}
 			else
 			{
-				Sleep(10);
+				Sleep(delay);
 			}
-			//if (cBuffer.push(message, mLength))
-			//{
-			//	//printf("Producer\nId: %d\nMessage: %s\n", mHeader.id, message);
-			//	//just for testing
-			//	//cBuffer.closeEverything();
-
-			//	msgSent = true;
-			//	msgLeft--;
-			//	Sleep(delay);
-			//}
-			//else
-			//{
-			//	Sleep(10);
-			//}
 		}
-
-		/*deleting the message so that there will be no memory leaks*/
-		//delete message;
 	}
 
-	//perhaps another while loop to control that all the clients have recieved their messages
-
-	/*In both of these function they should create a circularbuffer object
-	and then try to send messages, i guess.
-	
-	You need to fix so that it starts when all of the consumers and shit have
-	been connected. I think that the producer is supposed to be the last one to connect.
-	
-	Even if the producer is the first, we need to start sending when there is at least
-	one client present.
-	
-	delay will be used for the sleep function between the messages*/
-
-	//CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const bool & isProducer, const size_t & chunkSize)
+	/*deleting the message so that there will be no memory leaks*/
+	delete message;
 }
 
 void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, const size_t & numMessages)
 {
 	CircularBuffer cBuffer(buffName, buffSize, false, 256);
 	size_t msgLeft = numMessages;
-	char* msg = new char[buffSize];
+
+	//Creating the variable that will hold the message
+	char* msg = new char[buffSize * 1 << 10];
 
 	while (msgLeft > 0)
 	{
-		//Creating the variable that will hold the message
-		char* msg = NULL; 
 		size_t length;
 
 		bool msgRecieved = false;
@@ -140,14 +95,15 @@ void Consumer(LPCWSTR buffName, const size_t & delay, const size_t & buffSize, c
 		{
 			if (cBuffer.pop(msg, length))
 			{
-				//printf("Consumer\nid: %d\nMessage: %s\n", cBuffer.getId(), msg); temporary
+				msg[length] = '\0';
+				std::cout << msgLeft << " " << msg << "\n";
 				msgRecieved = true;
 				msgLeft--;
 				Sleep(delay);
 			}
 			else
 			{
-				Sleep(10); //is this where i'm supposed to use the delay?
+				Sleep(delay); 
 			}
 		}
 	}
@@ -158,9 +114,6 @@ int main(int argc, char* args[])
 {
 	if (argc >= 6)
 	{
-		//the first element is the executable command to
-		//get to this point, so for this program the first element is garbage.
-
 		/*
 		The first usable element (1) will determine if the program
 		will behave as a producer or a comsumer.
@@ -188,11 +141,10 @@ int main(int argc, char* args[])
 		else
 			chunkSize = atoi(args[5]);
 
-		if (strcmp(args[1], "Producer") == 0)
-			Producer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages, chunkSize);
-		else if (strcmp(args[1], "Consumer") == 0)
-			Consumer((LPCWSTR)"th3eSuperMap", delay, buffSize, numMessages);
+		if (strcmp(args[1], "producer") == 0)
+			Producer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages, chunkSize);
+		else if (strcmp(args[1], "consumer") == 0)
+			Consumer((LPCWSTR)"theSuperMap", delay, buffSize, numMessages);
 	}
-	//getchar();
 	return 0;
 }
