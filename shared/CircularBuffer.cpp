@@ -117,6 +117,19 @@ CircularBuffer::CircularBuffer(LPCWSTR buffName, const size_t & buffSize, const 
 	}
 	else
 	{
+		/*a loop that puts the producer to sleep
+		while there are no clients or clients are still
+		connecting.
+		----------------------------------------
+		The producer wil first check how many clients there are,
+		then sleep for 10 milliseconds and check if any new clients
+		have connected.
+		----------------------------------------
+		If a new client has connected during this time, the loop
+		will run again.
+		----------------------------------------
+		If no new clients have connected, the producer will assume
+		that all clients are connected and will start sending messages.*/
 		while (true)
 		{
 			try
@@ -180,6 +193,8 @@ bool CircularBuffer::canRead()
 
 size_t CircularBuffer::canWrite()
 {
+	/*This function will return the size of the current memory
+	avaliable for writing.*/
 	if (*tail != *head)
 	{
 		if (*tail > *head)
@@ -280,7 +295,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				/*calculating how many characters are at the rest of the memory*/
 				size_t fitLength = buffSize - (idOrOffset + sizeof(Header));
 
-				/*getting the first part of the emssage*/
+				/*getting the first part of the message*/
 				memcpy(msg, (void*)(cBuf + idOrOffset + sizeof(Header)), fitLength);
 
 				/*getting the second part*/
@@ -289,7 +304,7 @@ bool CircularBuffer::pop(char * msg, size_t & length)
 				/*updating the internal tail*/
 				this->idOrOffset = (size_t)((length - fitLength + padCalc(length - fitLength, chunkSize)) % buffSize);
 			}
-			else
+			else /*If all of the message fit in the buffer*/
 			{
 				/*getting the message*/
 				memcpy(msg, (void*)(cBuf + sizeof(Header) + idOrOffset), mHeader->length);
